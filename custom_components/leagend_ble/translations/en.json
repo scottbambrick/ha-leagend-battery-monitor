@@ -1,0 +1,18 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a Leagend battery monitor",
+        "description": "The monitor's Bluetooth address (e.g. AA:BB:CC:DD:EE:FF) and model.",
+        "data": {
+          "name": "Name",
+          "address": "Bluetooth address",
+          "model": "Model"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "This monitor is already added."
+    }
+  }
+}
