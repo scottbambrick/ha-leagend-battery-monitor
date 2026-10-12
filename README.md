@@ -23,7 +23,8 @@ Bluetooth proxy**. No cloud, no app, no extra hardware or firmware per car.
 | Battery status (Normal / Charging / Low charge) | | ✓ |
 | In range (on while the monitor answered in the last 16 minutes) | ✓ | ✓ |
 
-Readings keep their last value while the car is away. The *In range*
+Readings keep their last value while the car is away, and across Home
+Assistant restarts. The *In range*
 sensor works well as a "car is home" sensor, and its attributes show when
 the monitor was last read and heard, and the last error (handy when
 troubleshooting).
@@ -90,3 +91,15 @@ Add one entry per monitor.
 ## Licence
 
 [MIT](LICENSE).
+
+## Development
+
+The protocol code is covered by unit tests that run without Home Assistant:
+
+```sh
+pip install pytest cryptography
+pytest
+```
+
+GitHub Actions runs them, `ruff`, `hassfest` and the HACS validation on
+every push.

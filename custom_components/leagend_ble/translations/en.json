@@ -13,6 +13,9 @@
     },
     "abort": {
       "already_configured": "This monitor is already added."
+    },
+    "error": {
+      "invalid_address": "Enter a Bluetooth address like AA:BB:CC:DD:EE:FF."
     }
   }
 }

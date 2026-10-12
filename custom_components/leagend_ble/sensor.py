@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
+    RestoreSensor,
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -14,10 +14,12 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import LeagendConfigEntry
 from .const import MODEL_BM6
 from .entity import LeagendEntity
+from .protocol import BM6_STATUS, BM6_STATUS_OTHER
 
 VOLTAGE = SensorEntityDescription(
     key="voltage",
@@ -47,7 +49,7 @@ BM6_ONLY = (
         key="status",
         name="Battery status",
         device_class=SensorDeviceClass.ENUM,
-        options=["Normal", "Charging", "Low charge"],
+        options=[*BM6_STATUS.values(), BM6_STATUS_OTHER],
         icon="mdi:car-battery",
     ),
 )
@@ -66,11 +68,8 @@ async def async_setup_entry(
     async_add_entities(LeagendSensor(coordinator, d) for d in descriptions)
 
 
-class LeagendSensor(LeagendEntity, SensorEntity):
-    """Keeps the last reading while the car is away.
-
-    Unknown until the first reading after Home Assistant starts.
-    """
+class LeagendSensor(LeagendEntity, RestoreSensor):
+    """Keeps the last reading while the car is away, also over restarts."""
 
     def __init__(
         self, coordinator, description: SensorEntityDescription
@@ -78,6 +77,20 @@ class LeagendSensor(LeagendEntity, SensorEntity):
         """Create the sensor described by `description`."""
         super().__init__(coordinator, description.key)
         self.entity_description = description
+
+    async def async_added_to_hass(self) -> None:
+        """Bring back the reading from before a restart (until a new one)."""
+        await super().async_added_to_hass()
+        c = self.coordinator
+        key = self.entity_description.key
+        if c.data.get(key) is None:
+            last = await self.async_get_last_sensor_data()
+            if last is not None and last.native_value is not None:
+                c.data[key] = last.native_value
+        if c.last_seen is None:
+            state = await self.async_get_last_state()
+            seen = state.attributes.get("last_reading") if state else None
+            c.last_seen = dt_util.parse_datetime(seen) if seen else None
 
     @property
     def native_value(self):

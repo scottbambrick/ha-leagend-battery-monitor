@@ -24,6 +24,7 @@ async def async_setup_entry(
     """Set up one monitor."""
     coordinator = LeagendCoordinator(
         hass,
+        entry,
         entry.data[CONF_ADDRESS],
         entry.data[CONF_MODEL],
         entry.data[CONF_NAME],

@@ -8,6 +8,7 @@ up quickly. Values keep their last reading while the car is away.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime, timedelta
 
@@ -15,9 +16,8 @@ from bleak_retry_connector import (
     BleakClientWithServiceCache,
     establish_connection,
 )
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
 from homeassistant.components import bluetooth
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
@@ -31,55 +31,27 @@ from .const import (
     READ_TIMEOUT,
     WRITE_CHAR,
 )
+from .protocol import crypt, parse
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _crypt(key: bytes, data: bytes, encrypt: bool) -> bytes:
-    """AES-128-CBC with an all-zero IV over the first 16 bytes."""
-    cipher = Cipher(algorithms.AES(key), modes.CBC(bytes(16)))
-    op = cipher.encryptor() if encrypt else cipher.decryptor()
-    return op.update(data[:16]) + op.finalize()
-
-
-def parse(model: str, raw: bytes) -> dict | None:
-    """Decode one notification; None if it isn't a usable reading."""
-    if len(raw) < 16:
-        return None
-    out = _crypt(KEYS[model], raw, encrypt=False)
-
-    if model == MODEL_BM6:
-        # Only replies to our d15507 request; byte 3 = 0xFF is the empty
-        # acknowledgement frame
-        if out[0:3] != b"\xd1\x55\x07" or out[3] == 0xFF:
-            return None
-        volts = (((out[7] & 0x0F) << 8) | out[8]) / 100  # 12-bit field
-        if volts <= 0:
-            return None
-        temp = -out[4] if out[3] == 0x01 else out[4]  # sign flag
-        status = {0: "Normal", 2: "Charging"}.get(out[5], "Low charge")
-        return {
-            "voltage": volts,
-            "temperature": temp,
-            "state_of_charge": out[6],
-            "status": status,
-        }
-
-    # The BM2 streams readings as soon as it's connected
-    volts = ((out[2] | (out[1] << 8)) >> 4) / 100
-    return {"voltage": volts} if volts > 0 else None
 
 
 class LeagendCoordinator(DataUpdateCoordinator[dict]):
     """One battery monitor."""
 
     def __init__(
-        self, hass: HomeAssistant, address: str, model: str, name: str
+        self,
+        hass: HomeAssistant,
+        entry: ConfigEntry,
+        address: str,
+        model: str,
+        name: str,
     ) -> None:
         """Set up polling for the monitor at `address`."""
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=name,
             update_interval=timedelta(minutes=POLL_MINUTES),
         )
@@ -89,7 +61,7 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
         self.last_heard: datetime | None = None  # last advertisement
         self.last_error: str | None = None
         self._lock = asyncio.Lock()
-        self.data = {}
+        self.data: dict = {}
 
     @callback
     def async_advertisement(self, service_info, change) -> None:
@@ -100,7 +72,11 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
             > timedelta(minutes=POLL_MINUTES)
         )
         if stale and not self._lock.locked():
-            self.hass.async_create_task(self.async_request_refresh())
+            self.config_entry.async_create_background_task(
+                self.hass,
+                self.async_request_refresh(),
+                f"leagend_ble {self.name} advertisement",
+            )
 
     async def _async_update_data(self) -> dict:
         """Take one reading; keep the previous one if it fails."""
@@ -143,7 +119,7 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
             if self.model == MODEL_BM6:
                 # Let the subscription settle, then ask for a reading
                 await asyncio.sleep(1)
-                payload = _crypt(KEYS[MODEL_BM6], BM6_REQUEST, encrypt=True)
+                payload = crypt(KEYS[MODEL_BM6], BM6_REQUEST, encrypt=True)
                 try:
                     await client.write_gatt_char(
                         WRITE_CHAR, payload, response=True
@@ -155,4 +131,6 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
                     )
             return await asyncio.wait_for(got, READ_TIMEOUT)
         finally:
-            await client.disconnect()
+            # A failed hang-up must not throw away a good reading
+            with contextlib.suppress(Exception):
+                await client.disconnect()
