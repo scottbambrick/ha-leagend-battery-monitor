@@ -22,6 +22,8 @@ WRITE_CHAR = "0000fff3-0000-1000-8000-00805f9b34fb"
 BM6_REQUEST = bytes.fromhex("d1550700000000000000000000000000")
 
 POLL_MINUTES = 5
+# Advertisement-triggered reads: at most one try this often (seconds)
+ADVERT_RETRY = 60
 # "In range" while it answered within this long (tolerates two missed polls)
 IN_RANGE_MINUTES = 16
 READ_TIMEOUT = 15

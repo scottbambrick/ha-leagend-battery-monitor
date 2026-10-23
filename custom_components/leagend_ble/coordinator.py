@@ -23,6 +23,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    ADVERT_RETRY,
     BM6_REQUEST,
     KEYS,
     MODEL_BM6,
@@ -60,18 +61,27 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
         self.last_seen: datetime | None = None   # last successful reading
         self.last_heard: datetime | None = None  # last advertisement
         self.last_error: str | None = None
+        self._last_attempt: datetime | None = None
         self._lock = asyncio.Lock()
         self.data: dict = {}
 
     @callback
     def async_advertisement(self, service_info, change) -> None:
-        """Heard it advertise: read now if the last reading is stale."""
-        self.last_heard = dt_util.utcnow()
+        """Heard it advertise: read now if the last reading is stale.
+
+        At most one advertisement-triggered try per ADVERT_RETRY seconds, so a
+        monitor at the edge of range (heard, but reads keep failing) isn't
+        reconnected on every advertisement.
+        """
+        now = dt_util.utcnow()
+        self.last_heard = now
         stale = self.last_seen is None or (
-            dt_util.utcnow() - self.last_seen
-            > timedelta(minutes=POLL_MINUTES)
+            now - self.last_seen > timedelta(minutes=POLL_MINUTES)
         )
-        if stale and not self._lock.locked():
+        recent_try = self._last_attempt is not None and (
+            (now - self._last_attempt).total_seconds() < ADVERT_RETRY
+        )
+        if stale and not recent_try and not self._lock.locked():
             self.config_entry.async_create_background_task(
                 self.hass,
                 self.async_request_refresh(),
@@ -81,6 +91,7 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
     async def _async_update_data(self) -> dict:
         """Take one reading; keep the previous one if it fails."""
         async with self._lock:
+            self._last_attempt = dt_util.utcnow()
             try:
                 reading = await self._read()
             except Exception as err:  # noqa: BLE001
