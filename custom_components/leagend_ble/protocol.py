@@ -3,6 +3,7 @@
 Notifications and requests are AES-128-CBC with an all-zero IV over the
 first 16 bytes, using a fixed key per model (see const.KEYS).
 """
+
 from __future__ import annotations
 
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes

@@ -1,4 +1,5 @@
 """In range: the monitor answered recently (in practice: car is home)."""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -40,9 +41,7 @@ class LeagendInRange(LeagendEntity, BinarySensorEntity):
         """Re-check every minute, so it turns off without a poll."""
         await super().async_added_to_hass()
         self.async_on_remove(
-            async_track_time_interval(
-                self.hass, self._tick, timedelta(minutes=1)
-            )
+            async_track_time_interval(self.hass, self._tick, timedelta(minutes=1))
         )
 
     @callback

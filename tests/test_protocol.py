@@ -1,4 +1,5 @@
 """Decoding of BM2 / BM6 notifications (built by encrypting known frames)."""
+
 from custom_components.leagend_ble.const import (
     BM6_REQUEST,
     KEYS,

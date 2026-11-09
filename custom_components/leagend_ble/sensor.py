@@ -1,4 +1,5 @@
 """Battery voltage (both models); temperature, charge and status (BM6)."""
+
 from __future__ import annotations
 
 from homeassistant.components.sensor import (
@@ -71,9 +72,7 @@ async def async_setup_entry(
 class LeagendSensor(LeagendEntity, RestoreSensor):
     """Keeps the last reading while the car is away, also over restarts."""
 
-    def __init__(
-        self, coordinator, description: SensorEntityDescription
-    ) -> None:
+    def __init__(self, coordinator, description: SensorEntityDescription) -> None:
         """Create the sensor described by `description`."""
         super().__init__(coordinator, description.key)
         self.entity_description = description

@@ -3,6 +3,7 @@
 Each config entry is one monitor. Readings are taken through whichever
 connectable Bluetooth adapter or ESPHome Bluetooth proxy hears it best.
 """
+
 from __future__ import annotations
 
 from homeassistant.components import bluetooth
@@ -18,9 +19,7 @@ PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR]
 type LeagendConfigEntry = ConfigEntry[LeagendCoordinator]
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: LeagendConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: LeagendConfigEntry) -> bool:
     """Set up one monitor."""
     coordinator = LeagendCoordinator(
         hass,
@@ -50,10 +49,6 @@ async def async_setup_entry(
     return True
 
 
-async def async_unload_entry(
-    hass: HomeAssistant, entry: LeagendConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: LeagendConfigEntry) -> bool:
     """Unload a monitor."""
-    return await hass.config_entries.async_unload_platforms(
-        entry, PLATFORMS
-    )
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

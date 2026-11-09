@@ -5,12 +5,13 @@ hears it best), take one reading, disconnect. A reading is also taken as
 soon as the monitor is heard again after a gap, so a car coming home shows
 up quickly. Values keep their last reading while the car is away.
 """
+
 from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
 from datetime import datetime, timedelta
+import logging
 
 from bleak_retry_connector import (
     BleakClientWithServiceCache,
@@ -58,7 +59,7 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
         )
         self.address = address.upper()
         self.model = model
-        self.last_seen: datetime | None = None   # last successful reading
+        self.last_seen: datetime | None = None  # last successful reading
         self.last_heard: datetime | None = None  # last advertisement
         self.last_error: str | None = None
         self._last_attempt: datetime | None = None
@@ -97,8 +98,7 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
             except Exception as err:  # noqa: BLE001
                 # Out of range, busy proxy, timeout...: not an error
                 self.last_error = f"{type(err).__name__}: {err}"
-                _LOGGER.debug("%s: no reading (%s)", self.name,
-                              self.last_error)
+                _LOGGER.debug("%s: no reading (%s)", self.name, self.last_error)
                 return self.data or {}
             self.last_error = None
             self.last_seen = dt_util.utcnow()
@@ -132,14 +132,10 @@ class LeagendCoordinator(DataUpdateCoordinator[dict]):
                 await asyncio.sleep(1)
                 payload = crypt(KEYS[MODEL_BM6], BM6_REQUEST, encrypt=True)
                 try:
-                    await client.write_gatt_char(
-                        WRITE_CHAR, payload, response=True
-                    )
+                    await client.write_gatt_char(WRITE_CHAR, payload, response=True)
                 except Exception:  # noqa: BLE001
                     # Some firmware only takes write-without-response
-                    await client.write_gatt_char(
-                        WRITE_CHAR, payload, response=False
-                    )
+                    await client.write_gatt_char(WRITE_CHAR, payload, response=False)
             return await asyncio.wait_for(got, READ_TIMEOUT)
         finally:
             # A failed hang-up must not throw away a good reading
