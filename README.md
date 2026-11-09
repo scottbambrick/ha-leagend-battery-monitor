@@ -55,6 +55,10 @@ troubleshooting).
 
 ## Installation
 
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=scottbambrick&repository=ha-leagend-battery-monitor&category=integration)
+
+The button adds this repository to HACS (as a custom repository) in your own Home Assistant; then install it and restart. HACS offers each new GitHub release as an update.
+
 **HACS (custom repository):** HACS → ⋮ → *Custom repositories* → add
 `https://github.com/scottbambrick/ha-leagend-battery-monitor` as an
 *Integration* → install → restart Home Assistant.
@@ -63,6 +67,8 @@ troubleshooting).
 `config/custom_components/` folder and restart.
 
 ## Setup
+
+[![Open your Home Assistant instance and start setting up this integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=leagend_ble)
 
 *Settings → Devices & services → Add integration → Leagend Battery
 Monitor*, then enter:
